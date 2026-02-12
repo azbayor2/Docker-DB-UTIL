@@ -1,18 +1,13 @@
 #!/bin/bash
-#
-#먼저 인자에 위험한 값이 있는지 확인
 
-mkdir -p ./db-util  &> /dev/null
 
-if [[ "$2" == *"/"* ]]; then
-        echo "there should be no path in the second argument"
-        exit 1
-fi
+mkdir -p ./.db-util  &> /dev/null
+mkdir -p ./.db-util/backups &> /dev/null
 
 
 # config 파일 확인
 
-if [[ ! -f "./.db-util/config"]]; then  
+if [[ ! -f "./.db-util/config" ]]; then  
     echo "no config file!"
     exit 1
 
@@ -22,8 +17,8 @@ fi
 ## 환경 변수 가져오기
 source ./.db-util/config
 
-if [[ "$DB_PATH" == "" ]]
-    echo "DB_PATH variable is emtpy!"
+if [[ -z "$DB_PATH" ]]; then
+        echo "DB_PATH variable is empty!"
     exit 1
 
 fi
@@ -36,25 +31,30 @@ if [[ -z "$1" ]]; then
 
 elif [[ "$1" == "backup" ]]; then   #백업하기
 
+        if [[ "$2" == *"/"* ]]; then
+                echo "there should be no path in the backup name"
+                exit 1
+        fi
+
         # 백업저장 폴더 이름 확인하기
         if [[ -z "$2" ]]; then
                 echo "백업 파일의 이름을 지정해주세요!"
                 exit 1
         fi
 
-        if [[ -d "./db-util/$2" ]]; then
+        if [[ -d "./.db-util/backups/$2" ]]; then
                 echo "백업 이미 파일이 존재합니다!"
                 exit 1
 
         fi
 
 
-        if [[ -d "./mysql" ]]; then   #백업할 파일이 있으면
-                sudo cp -r ./mysql "./.db-util/backups/$2" &> /dev/null
+        if [[ -d "$DB_PATH" ]]; then   #백업할 파일이 있으면
+                sudo cp -r "$DB_PATH" "./.db-util/backups/$2" &> /dev/null
 
 
                 #백업 실패
-                if [[ ! -d "./db-util/$2" ]]; then
+                if [[ ! -d "./.db-util/backups/$2" ]]; then
                         echo "backup failed.. exiting"
                         exit 1
                 fi
@@ -71,6 +71,11 @@ elif [[ "$1" == "backup" ]]; then   #백업하기
 
 elif [[ "$1" == "restore" ]]; then   #복구하기
 
+        if [[ "$2" == *"/"* ]]; then
+                echo "there should be no path in the backup name"
+                exit 1
+        fi
+
         #복구 파일 이름 확인하기
         if [[ -z "$2" ]]; then
                 echo "복구 파일의 이름을 명시해주세요!"
@@ -78,7 +83,7 @@ elif [[ "$1" == "restore" ]]; then   #복구하기
         fi
 
 
-        if [[ -d "./db-util/$2" ]]; then   #복구 파일이 있으면
+        if [[ -d "./.db-util/backups/$2" ]]; then   #복구 파일이 있으면
 
                 if [[ ! -f "./docker-compose.yml" ]]; then    #도커 파일이 없으면
                         echo "docker compose file missing! exiting"
@@ -90,17 +95,17 @@ elif [[ "$1" == "restore" ]]; then   #복구하기
 
                 echo "restoring..."
 
-                sudo rm -rf ./mysql &> /dev/null
-                if [[ -d "./mysql" ]]; then   #지우기 실패하면
+                sudo rm -rf "$DB_PATH" &> /dev/null
+                if [[ -d "$DB_PATH" ]]; then   #지우기 실패하면
                         echo "restore failed.. exiting"
                         exit 1
 
                 fi
 
 
-                sudo cp -r "./.db-util/backups/$2" ./mysql &> /dev/null
+                sudo cp -r "./.db-util/backups/$2" "$DB_PATH" &> /dev/null
 
-                if [[ ! -d "./mysql" ]]; then
+                if [[ ! -d "$DB_PATH" ]]; then
                         echo "restore failed... exiting"
                         exit 1
 
@@ -133,7 +138,7 @@ elif [[ "$1" == "reset" ]]; then
                 echo "turning off containers..."
                 sudo docker compose down -v &> /dev/null
                 echo "erasing files.."
-                sudo rm -rf ./mysql &> /dev/null
+                sudo rm -rf "$DB_PATH" &> /dev/null
                 echo "starting containers..."
                 sudo docker compose up -d --build
 
@@ -157,11 +162,16 @@ elif [[ "$1" == "dockerdown" ]]; then
         exit 0
 
 elif [[ "$1" == "list" ]]; then
-        ls ./db-util/
+        ls ./.db-util/backups
         exit 0
 
 elif [[ "$1" == "setpath" ]]; then
-    echo "DB_PATH=$2" > ./.db-util/config
+        if [[ -z "$2" ]]; then
+                echo "path is required"
+                exit 1
+        fi
+
+        echo "DB_PATH=$2" > ./.db-util/config
     echo "done!"
     exit 0
 
@@ -173,7 +183,7 @@ elif [[ "$1" == "options" ]]; then
         echo "dockerup - start containers of docker compose file"
         echo "dockerdown - remove containes of docker compose file"
         echo "list - list all available backup files"
-        echo "setpath - set path for backup"
+        echo "setpath [path]- set path for backup, relative and absolute path supported!"
 
 else
 
