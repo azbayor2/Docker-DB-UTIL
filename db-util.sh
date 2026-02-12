@@ -3,9 +3,8 @@
 
 mkdir -p ./.db-util  &> /dev/null
 mkdir -p ./.db-util/backups &> /dev/null
-if [[ ! -f "./.db-util/config" ]]
+if [[ ! -f "./.db-util/config" ]]; then
         echo "DB_PATH=" > ./.db-util/config
-
 fi
 
 
