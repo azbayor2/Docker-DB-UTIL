@@ -3,13 +3,18 @@
 
 mkdir -p ./.db-util  &> /dev/null
 mkdir -p ./.db-util/backups &> /dev/null
+if [[ ! -f "./.db-util/config" ]]
+        echo "DB_PATH=" > ./.db-util/config
+
+fi
 
 
 # config 파일 확인
 
 
-if [[ "$1" != "setpath" && ! -f "./.db-util/config" ]]; then  
+if [[ ( "$1" != "setpath" && "$1" != "options" ) && ! -f "./.db-util/config" ]]; then  
     echo "no config file!"
+    echo "use [./db-util.sh options] for help!"
     exit 1
 
 fi
@@ -18,8 +23,9 @@ fi
 ## 환경 변수 가져오기
 source ./.db-util/config
 
-if [[ -z "$DB_PATH" ]]; then
+if [[ ("$1" != "setpath" && "$1" != "options" )  && -z "$DB_PATH" ]]; then
         echo "DB_PATH variable is empty!"
+        echo "use [./db-util.sh options] for help!"
     exit 1
 
 fi
@@ -172,7 +178,7 @@ elif [[ "$1" == "setpath" ]]; then
                 exit 1
         fi
 
-        echo "DB_PATH=$2" > ./.db-util/config
+        echo "DB_PATH=\"$2\"" > ./.db-util/config
     echo "done!"
     exit 0
 
@@ -189,5 +195,6 @@ elif [[ "$1" == "options" ]]; then
 else
 
         echo "please enter an valid argument!"
+        echo "use [./db-util.sh options] for help!"
         exit 1
 fi
