@@ -7,7 +7,8 @@ mkdir -p ./.db-util/backups &> /dev/null
 
 # config 파일 확인
 
-if [[ ! -f "./.db-util/config" ]]; then  
+
+if [[ "$1" != "setpath" && ! -f "./.db-util/config" ]]; then  
     echo "no config file!"
     exit 1
 
