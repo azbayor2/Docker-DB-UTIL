@@ -5,7 +5,7 @@
 ## 📁 구성 파일
 
 - db-util.sh: 메인 스크립트
-- .db-util/config: 설정 파일 (DB_PATH 보관)
+- .db-util/config: 설정 파일 (DB_PATH, DOCKER_COMPOSE_PATH 보관)
 - .db-util/backups/: 백업 저장 디렉터리
 
 ## 🧪 설치/준비
@@ -13,11 +13,23 @@
 - 실행 환경: Linux 또는 macOS의 bash 쉘
 
 1. Docker와 Docker Compose를 설치합니다.
-2. 설정 파일을 생성합니다.
+2. 설정 파일을 생성합니다. 아래 둘 중 하나를 선택하세요.
+
+### 방법 A: 수동으로 config 작성
 
 ```bash
 mkdir -p ./.db-util
-echo "DB_PATH=/path/to/mysql" > ./.db-util/config
+cat <<'EOF' > ./.db-util/config
+DB_PATH="/path/to/mysql"
+DOCKER_COMPOSE_PATH="/path/to/docker-compose.yml"
+EOF
+```
+
+### 방법 B: 스크립트로 설정
+
+```bash
+./db-util.sh setpath /path/to/mysql
+./db-util.sh setdockerpath /path/to/docker-compose.yml
 ```
 
 ## ▶️ 사용 방법
@@ -35,17 +47,19 @@ echo "DB_PATH=/path/to/mysql" > ./.db-util/config
 - dockerdown: 컨테이너를 중지하고 볼륨을 제거합니다.
 - list: 사용 가능한 백업 목록을 출력합니다.
 - setpath [path]: DB_PATH 값을 ./.db-util/config에 저장합니다.
+- setdockerpath [path]: DOCKER_COMPOSE_PATH 값을 ./.db-util/config에 저장합니다.
 
 ## 💡 참고 사항
 
 - backup/restore의 두 번째 인자는 경로(`/`)를 허용하지 않습니다.
-- config 파일이 없거나 DB_PATH가 비어 있으면 스크립트가 종료됩니다.
+- config 파일이 없거나 DB_PATH/DOCKER_COMPOSE_PATH가 비어 있으면 스크립트가 종료됩니다.
 - 백업은 ./.db-util/backups 아래에 저장됩니다.
 
 ## ✅ 예시
 
 ```bash
 ./db-util.sh setpath /data/mysql
+./db-util.sh setdockerpath /path/to/docker-compose.yml
 ./db-util.sh backup my-backup
 ./db-util.sh list
 ./db-util.sh restore my-backup

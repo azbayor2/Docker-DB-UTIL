@@ -4,14 +4,15 @@
 mkdir -p ./.db-util  &> /dev/null
 mkdir -p ./.db-util/backups &> /dev/null
 if [[ ! -f "./.db-util/config" ]]; then
-        echo "DB_PATH=" > ./.db-util/config
+        echo "DB_PATH=\"\"" > ./.db-util/config
+        echo "DOCKER_COMPOSE_PATH=\"\"" >> ./.db-util/config
 fi
 
 
 # config 파일 확인
 
 
-if [[ ( "$1" != "setpath" && "$1" != "options" ) && ! -f "./.db-util/config" ]]; then  
+if [[ ( "$1" != "setpath" && "$1" != "options" && "$1" != "setdockerpath" ) && ! -f "./.db-util/config" ]]; then  
     echo "no config file!"
     echo "use [./db-util.sh options] for help!"
     exit 1
@@ -22,8 +23,8 @@ fi
 ## 환경 변수 가져오기
 source ./.db-util/config
 
-if [[ ("$1" != "setpath" && "$1" != "options" )  && -z "$DB_PATH" ]]; then
-        echo "DB_PATH variable is empty!"
+if [[ ("$1" != "setpath" && "$1" != "options" && "$1" != "setdockerpath" )  && ( -z "$DB_PATH" || -z "$DOCKER_COMPOSE_PATH") ]]; then
+        echo "DB_PATH or DOCKER_COMPOSE_PATH variable is empty!"
         echo "use [./db-util.sh options] for help!"
     exit 1
 
@@ -91,13 +92,13 @@ elif [[ "$1" == "restore" ]]; then   #복구하기
 
         if [[ -d "./.db-util/backups/$2" ]]; then   #복구 파일이 있으면
 
-                if [[ ! -f "./docker-compose.yml" ]]; then    #도커 파일이 없으면
+                if [[ ! -f "$DOCKER_COMPOSE_PATH" ]]; then    #도커 파일이 없으면
                         echo "docker compose file missing! exiting"
                         exit 1
                 fi
 
                 echo "turning off containers..."
-                sudo docker compose down -v &> /dev/null   #컨테이너 끄기
+                sudo docker compose -f "$DOCKER_COMPOSE_PATH" down -v &> /dev/null   #컨테이너 끄기
 
                 echo "restoring..."
 
@@ -118,7 +119,7 @@ elif [[ "$1" == "restore" ]]; then   #복구하기
                 fi
 
                 echo "turning on containers..."
-                sudo docker compose up -d --build &> /dev/null
+                sudo docker compose -f "$DOCKER_COMPOSE_PATH" up -d --build &> /dev/null
                 echo "done restore!"
                 exit 0
 
@@ -134,7 +135,7 @@ elif [[ "$1" == "restore" ]]; then   #복구하기
 elif [[ "$1" == "reset" ]]; then
         read -p "are you sure to reset? y/n: " args
 
-        if [[ ! -f "./docker-compose.yml" ]]; then
+        if [[ ! -f "$DOCKER_COMPOSE_PATH" ]]; then
                 echo "docker compose file missing!"
                 exit 1
 
@@ -142,11 +143,11 @@ elif [[ "$1" == "reset" ]]; then
 
         if [[ "$args" == "y" || "$args" == "Y" ]]; then
                 echo "turning off containers..."
-                sudo docker compose down -v &> /dev/null
+                sudo docker compose -f "$DOCKER_COMPOSE_PATH" down -v &> /dev/null
                 echo "erasing files.."
                 sudo rm -rf "$DB_PATH" &> /dev/null
                 echo "starting containers..."
-                sudo docker compose up -d --build
+                sudo docker compose -f "$DOCKER_COMPOSE_PATH" up -d --build
 
                 echo "done!"
                 exit 0
@@ -160,11 +161,11 @@ elif [[ "$1" == "reset" ]]; then
         fi
 
 elif [[ "$1" == "dockerup" ]]; then
-        sudo docker compose up -d --build
+        sudo docker compose -f "$DOCKER_COMPOSE_PATH" up -d --build
         exit 0
 
 elif [[ "$1" == "dockerdown" ]]; then
-        sudo docker compose down -v
+        sudo docker compose -f "$DOCKER_COMPOSE_PATH" down -v
         exit 0
 
 elif [[ "$1" == "list" ]]; then
@@ -177,7 +178,27 @@ elif [[ "$1" == "setpath" ]]; then
                 exit 1
         fi
 
+        if [[ -f "./.db-util/config" ]]; then
+                source ./.db-util/config
+        fi
+
         echo "DB_PATH=\"$2\"" > ./.db-util/config
+        echo "DOCKER_COMPOSE_PATH=\"$DOCKER_COMPOSE_PATH\"" >> ./.db-util/config
+    echo "done!"
+    exit 0
+
+elif [[ "$1" == "setdockerpath" ]]; then
+        if [[ -z "$2" ]]; then
+                echo "path is required"
+                exit 1
+        fi
+
+        if [[ -f "./.db-util/config" ]]; then
+                source ./.db-util/config
+        fi
+
+        echo "DB_PATH=\"$DB_PATH\"" > ./.db-util/config
+        echo "DOCKER_COMPOSE_PATH=\"$2\"" >> ./.db-util/config
     echo "done!"
     exit 0
 
@@ -190,6 +211,7 @@ elif [[ "$1" == "options" ]]; then
         echo "dockerdown - remove containes of docker compose file"
         echo "list - list all available backup files"
         echo "setpath [path]- set path for backup, relative and absolute path supported!"
+        echo "setdockerpath [path]- set path for docker compose file, relative and absolute path supported!"
 
 else
 
